@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Numaris — Dashboard de Cumplimiento</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#06080f;color:#f0f4ff;font-family:'Inter',sans-serif;min-height:100vh;}
+.topbar{background:#0b0e18;border-bottom:1px solid rgba(255,255,255,0.06);padding:0 28px;height:58px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-size:17px;font-weight:800;color:#60a5fa;letter-spacing:2px;}
+.topbar-r{display:flex;align-items:center;gap:10px;}
+.spill{display:flex;align-items:center;gap:7px;background:#10141f;border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:5px 14px;font-size:12px;color:#4b5a7a;}
+.sdot{width:7px;height:7px;border-radius:50%;background:#1e2a40;flex-shrink:0;}
+.sdot.ok{background:#10b981;box-shadow:0 0 8px #10b981;}
+.sdot.err{background:#ef4444;}
+.rbtn{background:#2563eb;border:none;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;font-family:'Inter',sans-serif;}
+.rbtn:hover{background:#3b82f6;}
+.tabs-bar{background:#0b0e18;border-bottom:1px solid rgba(255,255,255,0.06);padding:0 28px;display:flex;gap:2px;overflow-x:auto;}
+.tab{padding:13px 18px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:#4b5a7a;border-bottom:2px solid transparent;transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap;}
+.tab:hover{color:#c7d4f0;}
+.tab.active{color:#60a5fa;border-bottom-color:#60a5fa;}
+.content{padding:22px 28px;}
+.section{display:none;}
+.section.visible{display:block;}
+
+/* PERIOD GRID */
+.pgrid{display:grid;grid-template-columns:300px 1fr;gap:18px;}
+@media(max-width:760px){.pgrid{grid-template-columns:1fr;}}
+
+/* GAUGE CARD */
+.gcard{background:#0b0e18;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:22px 18px 18px;display:flex;flex-direction:column;align-items:center;position:relative;}
+.gcard-top-line{position:absolute;top:0;left:20px;right:20px;height:2px;border-radius:0 0 2px 2px;background:linear-gradient(90deg,transparent,#3b82f6 40%,#60a5fa 60%,transparent);}
+.geyebrow{font-size:10px;font-weight:700;letter-spacing:2.5px;color:#2e3f5c;text-transform:uppercase;align-self:flex-start;margin-bottom:10px;}
+.gname{font-size:15px;font-weight:700;margin-top:8px;text-align:center;color:#e2eaff;}
+.gstatus{font-size:12px;font-weight:600;margin-top:3px;letter-spacing:0.5px;}
+.glegend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center;}
+.gli{display:flex;align-items:center;gap:4px;font-size:10px;color:#3a4f6e;}
+.gld{width:6px;height:6px;border-radius:50%;}
+
+/* RIGHT PANEL */
+.rpanel{background:#0b0e18;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 20px;}
+.rpey{font-size:10px;font-weight:700;letter-spacing:2.5px;color:#2e3f5c;text-transform:uppercase;margin-bottom:12px;}
+.avgstrip{background:#0f1420;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:11px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer;transition:background .12s;}
+.avgstrip:hover{background:#131926;}
+.avgstrip.active-avg{border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.06);}
+.avglbl{font-size:12px;color:#4b5a7a;}
+.avgval{font-family:'DM Mono',monospace;font-size:22px;font-weight:700;}
+.avg-hint{font-size:10px;color:#2e3f5c;margin-top:1px;}
+
+.mrow{display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:8px;cursor:pointer;transition:background .12s;border:1px solid transparent;margin-bottom:2px;}
+.mrow:hover{background:#0f1420;}
+.mrow.active{background:rgba(59,130,246,0.08);border-color:rgba(59,130,246,0.15);}
+.mrnum{font-family:'DM Mono',monospace;font-size:10px;color:#1e2a40;min-width:18px;}
+.mrbody{flex:1;min-width:0;}
+.mrname{font-size:13px;font-weight:600;color:#c7d4f0;}
+.mrtrack{height:4px;background:rgba(255,255,255,0.04);border-radius:2px;margin-top:5px;overflow:hidden;}
+.mrfill{height:4px;border-radius:2px;}
+.mrpct{font-family:'DM Mono',monospace;font-size:13px;font-weight:700;min-width:36px;text-align:right;}
+
+/* RESUMEN EJECUTIVO */
+.exec-wrap{margin-top:20px;border-top:1px solid rgba(255,255,255,0.05);padding-top:18px;}
+.exec-title{font-size:10px;font-weight:700;letter-spacing:2.5px;color:#2e3f5c;text-transform:uppercase;margin-bottom:12px;}
+.exec-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+@media(max-width:600px){.exec-grid{grid-template-columns:1fr;}}
+.exec-card{background:#0f1420;border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:12px 14px;}
+.exec-lbl{font-size:9px;font-weight:700;letter-spacing:1.5px;color:#2e3f5c;text-transform:uppercase;margin-bottom:5px;}
+.exec-txt{font-size:12px;color:#6b7a99;line-height:1.6;}
+
+/* EVO */
+.elay{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:760px){.elay{grid-template-columns:1fr;}}
+.egrow{background:#0b0e18;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.eglbl{font-size:12px;color:#4b5a7a;}
+.egr{display:flex;align-items:center;gap:8px;}
+.egval{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;}
+.egbadge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.ecards{display:grid;grid-template-columns:repeat(auto-fill,minmax(144px,1fr));gap:8px;}
+.ecard{background:#0b0e18;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:12px 13px;}
+.ecname{font-size:11px;font-weight:700;color:#3a4f6e;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase;letter-spacing:0.5px;}
+.ecbars{display:flex;gap:4px;align-items:flex-end;height:36px;margin-bottom:6px;}
+.eccol{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.ecfill{width:100%;border-radius:2px 2px 0 0;}
+.eclbl{font-family:'DM Mono',monospace;font-size:8px;color:#1e2a40;}
+.ecfoot{display:flex;justify-content:space-between;align-items:center;}
+.ecrange{font-family:'DM Mono',monospace;font-size:9px;color:#2e3f5c;}
+.ecdelta{font-size:12px;font-weight:800;}
+.cpanel{background:#0b0e18;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:20px;}
+.cplbl{font-size:10px;font-weight:700;letter-spacing:2.5px;color:#2e3f5c;text-transform:uppercase;margin-bottom:14px;}
+.cwrap{position:relative;width:100%;height:240px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">NUMARIS</div>
+  <div class="topbar-r">
+    <div class="spill">
+      <div class="sdot" id="sdot"></div>
+      <span id="smsg">Cargando...</span>
+    </div>
+    <button class="rbtn" onclick="loadData()">&#8635; Actualizar</button>
+  </div>
+</div>
+
+<div class="tabs-bar" id="tabs"></div>
+
+<div class="content">
+  <div id="sec-evo" class="section">
+    <div class="elay">
+      <div>
+        <div class="egrow" id="evo-growth"></div>
+        <div class="ecards" id="evo-cards"></div>
+      </div>
+      <div class="cpanel">
+        <div class="cplbl">Evolucion semana a semana</div>
+        <div class="cwrap"><canvas id="evo-chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+var SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSfQ5NOre42yMgLxb45UlxqanJQr6TUII_1aJ3DCd7-h43MjbK6-XhgrAsgw1JWEtiSL_Insq3M91JY/pub?output=csv";
+
+var FALLBACK = {
+  "Semana 10":[{name:"Lucio Juarez",pct:84},{name:"Jose Manuel",pct:81},{name:"Israel Lomeli",pct:75},{name:"Zuriel Serrato",pct:70},{name:"Guillermo Angeles",pct:66},{name:"Claudia Anaya",pct:59}],
+  "Semana 11":[{name:"Lucio Juarez",pct:92},{name:"Guillermo Angeles",pct:88},{name:"Zuriel Serrato",pct:72},{name:"Claudia Anaya",pct:70},{name:"Jose Manuel",pct:67},{name:"Israel Lomeli",pct:65}],
+  "Semana 12":[{name:"Lucio Juarez",pct:96},{name:"Jose Manuel",pct:92},{name:"Zuriel Serrato",pct:88},{name:"Claudia Anaya",pct:87},{name:"Israel Lomeli",pct:83},{name:"Guillermo Angeles",pct:76}]
+};
+
+var PERIODS = {};
+var evoChart = null;
+var LCOLORS = ["#60a5fa","#34d399","#fbbf24","#f472b6","#a78bfa","#fb923c"];
+
+var INSIGHTS = {
+  "Lucio Juarez":      { tag:"Estrella",          tagC:"#34d399", tagBg:"rgba(52,211,153,0.15)",  text:"Trayectoria ascendente sin caidas: 84→92→96. Unico en zona Sobresaliente. Referente del equipo." },
+  "Jose Manuel":       { tag:"Volatil",            tagC:"#fbbf24", tagBg:"rgba(251,191,36,0.15)",  text:"Caida critica S11 (-14 pts) y rebote historico S12 (+25 pts). Alta variabilidad. Trabajar consistencia." },
+  "Zuriel Serrato":    { tag:"Consistente",        tagC:"#60a5fa", tagBg:"rgba(96,165,250,0.15)",  text:"Avance gradual y solido sin retrocesos. Mayor ganancia en S12 (+16 pts). Perfil muy confiable." },
+  "Claudia Anaya":     { tag:"Mayor mejora",       tagC:"#a78bfa", tagBg:"rgba(167,139,250,0.15)", text:"De zona critica (59%) a Competente (87%). Crecimiento neto de +28 pts, el mayor del equipo." },
+  "Israel Lomeli":     { tag:"En seguimiento",     tagC:"#fb923c", tagBg:"rgba(251,146,60,0.15)",  text:"Bajo en S11 (-10 pts) y recupero parcialmente. No regreso a nivel inicial. Requiere consolidacion." },
+  "Guillermo Angeles": { tag:"Requiere atencion",  tagC:"#f87171", tagBg:"rgba(248,113,113,0.15)", text:"Pico en S11 (+22 pts) seguido de caida en S12 (-12 pts). Unico con tendencia negativa al cierre." }
+};
+
+function gc(p) {
+  if (p >= 95) return "#10b981";
+  if (p >= 85) return "#84cc16";
+  if (p >= 70) return "#f59e0b";
+  if (p >= 60) return "#fb923c";
+  return "#ef4444";
+}
+function gs(p) {
+  if (p >= 95) return "Sobresaliente";
+  if (p >= 85) return "Competente";
+  if (p >= 70) return "En riesgo";
+  return "Critico";
+}
+function calcAvg(arr) {
+  return Math.round(arr.reduce(function(s,m){ return s + m.pct; }, 0) / arr.length);
+}
+function initials(name) {
+  return name.split(" ").slice(0,2).map(function(w){ return w[0]; }).join("");
+}
+
+function drawGauge(svgEl, value) {
+  svgEl.innerHTML = "";
+  var NS = "http://www.w3.org/2000/svg";
+  var cx = 130, cy = 138, r = 90, sw = 24;
+  function pt(f, rad) {
+    var a = Math.PI + f * Math.PI;
+    return { x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) };
+  }
+  function arcD(f1, f2, rad) {
+    var s = pt(f1, rad), e = pt(f2, rad);
+    var lg = (f2 - f1) > 0.5 ? 1 : 0;
+    return "M" + s.x.toFixed(2) + "," + s.y.toFixed(2) + " A" + rad + "," + rad + " 0 " + lg + " 1 " + e.x.toFixed(2) + "," + e.y.toFixed(2);
+  }
+  function mk(tag, attrs, parent) {
+    var el = document.createElementNS(NS, tag);
+    Object.keys(attrs).forEach(function(k) { el.setAttribute(k, attrs[k]); });
+    if (parent) parent.appendChild(el);
+    return el;
+  }
+  var defs = mk("defs", {}, svgEl);
+  var uid = "cl" + (Math.random() * 1e9 | 0);
+  var clip = mk("clipPath", {id: uid}, defs);
+  mk("rect", {x: 0, y: 0, width: 260, height: 150}, clip);
+  var g = mk("g", {"clip-path": "url(#" + uid + ")"}, svgEl);
+  var zones = [[0,.60,"#ef4444"],[.60,.70,"#fb923c"],[.70,.85,"#f59e0b"],[.85,.95,"#84cc16"],[.95,1.0,"#10b981"]];
+  zones.forEach(function(z) {
+    mk("path", {d: arcD(z[0],z[1],r), stroke: z[2], "stroke-width": sw, fill: "none", opacity: "0.18", "stroke-linecap": "butt"}, g);
+  });
+  mk("path", {d: arcD(0,1,r), stroke: "#0b0e1a", "stroke-width": sw-10, fill: "none", "stroke-linecap": "butt"}, g);
+  var frac = Math.max(0.001, Math.min(value / 100, 1));
+  mk("path", {d: arcD(0,frac,r), stroke: gc(value), "stroke-width": sw-10, fill: "none", "stroke-linecap": "round"}, g);
+  var innerR = r - sw/2 - 12;
+  var ticks = [{f:0,t:"0"},{f:.6,t:"60"},{f:.7,t:"70"},{f:.85,t:"85"},{f:.95,t:"95"},{f:1,t:"100"}];
+  ticks.forEach(function(tk) {
+    var lp = pt(tk.f, innerR);
+    var tx = mk("text", {x: lp.x.toFixed(1), y: lp.y.toFixed(1), "text-anchor": "middle", "dominant-baseline": "middle", "font-size": "8", fill: "#2e4060", "font-family": "DM Mono,monospace"}, g);
+    tx.textContent = tk.t;
+  });
+  var na = Math.PI + frac * Math.PI;
+  var nl = r - 4;
+  var nx = (cx + nl * Math.cos(na)).toFixed(1);
+  var ny = (cy + nl * Math.sin(na)).toFixed(1);
+  mk("line", {x1:cx, y1:cy, x2:nx, y2:ny, stroke:"rgba(0,0,0,0.55)", "stroke-width":"5", "stroke-linecap":"round"}, g);
+  mk("line", {x1:cx, y1:cy, x2:nx, y2:ny, stroke:"#e2eaff", "stroke-width":"2.5", "stroke-linecap":"round"}, g);
+  mk("circle", {cx:cx, cy:cy, r:"10", fill:"#06080f", stroke:gc(value), "stroke-width":"2.5"}, g);
+  mk("circle", {cx:cx, cy:cy, r:"4", fill:"#e2eaff"}, g);
+  var vt = mk("text", {x:cx, y:cy-26, "text-anchor":"middle", "font-size":"30", "font-weight":"800", fill:gc(value), "font-family":"DM Mono,monospace"}, g);
+  vt.textContent = value + "%";
+}
+
+function buildSection(key, label, members, allPeriods) {
+  var sec = document.getElementById("sec-" + key);
+  if (!sec) {
+    sec = document.createElement("div");
+    sec.id = "sec-" + key;
+    sec.className = "section";
+    document.querySelector(".content").appendChild(sec);
+  }
+  var a = calcAvg(members);
+  var sorted = members.slice().sort(function(a,b){ return b.pct - a.pct; });
+
+  sec.innerHTML =
+    '<div class="pgrid">' +
+      '<div class="gcard">' +
+        '<div class="gcard-top-line"></div>' +
+        '<div class="geyebrow">' + label + '</div>' +
+        '<svg id="svg-' + key + '" viewBox="0 0 260 150" style="width:100%;max-width:260px;overflow:hidden;"></svg>' +
+        '<div class="gname" id="gn-' + key + '">' + label + '</div>' +
+        '<div class="gstatus" id="gs-' + key + '" style="color:' + gc(a) + '">' + gs(a) + '</div>' +
+        '<div class="glegend">' +
+          '<div class="gli"><div class="gld" style="background:#ef4444"></div>&lt;70%</div>' +
+          '<div class="gli"><div class="gld" style="background:#f59e0b"></div>70-84%</div>' +
+          '<div class="gli"><div class="gld" style="background:#84cc16"></div>85-94%</div>' +
+          '<div class="gli"><div class="gld" style="background:#10b981"></div>95%+</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="rpanel">' +
+        '<div class="rpey">Equipo</div>' +
+        '<div class="avgstrip active-avg" id="avgstrip-' + key + '">' +
+          '<div>' +
+            '<div class="avglbl">Promedio general del periodo</div>' +
+            '<div class="avg-hint">Clic para regresar al promedio</div>' +
+          '</div>' +
+          '<span class="avgval" id="ga-' + key + '" style="color:' + gc(a) + '">' + a + '%</span>' +
+        '</div>' +
+        '<div id="ml-' + key + '"></div>' +
+
+      '</div>' +
+    '</div>';
+
+  drawGauge(document.getElementById("svg-" + key), a);
+
+  // Promedio strip — click resets to team average
+  var avgStrip = document.getElementById("avgstrip-" + key);
+  avgStrip.addEventListener("click", function() {
+    var ml = document.getElementById("ml-" + key);
+    ml.querySelectorAll(".mrow").forEach(function(r){ r.classList.remove("active"); });
+    document.getElementById("adv-" + key).querySelectorAll(".adv-card").forEach(function(c){ c.classList.remove("active-adv"); });
+    avgStrip.classList.add("active-avg");
+    drawGauge(document.getElementById("svg-" + key), a);
+    document.getElementById("gn-" + key).textContent = label;
+    document.getElementById("gs-" + key).textContent = gs(a);
+    document.getElementById("gs-" + key).style.color = gc(a);
+    document.getElementById("ga-" + key).textContent = a + "%";
+    document.getElementById("ga-" + key).style.color = gc(a);
+  });
+
+  var ml = document.getElementById("ml-" + key);
+  sorted.forEach(function(m, i) {
+    var row = document.createElement("div");
+    row.className = "mrow";
+    row.innerHTML =
+      '<div class="mrnum">' + (i < 9 ? "0" : "") + (i+1) + '</div>' +
+      '<div class="mrbody"><div class="mrname">' + m.name + '</div>' +
+      '<div class="mrtrack"><div class="mrfill" style="width:' + m.pct + '%;background:' + gc(m.pct) + '"></div></div></div>' +
+      '<div class="mrpct" style="color:' + gc(m.pct) + '">' + m.pct + '%</div>';
+    row.addEventListener("click", function() {
+      ml.querySelectorAll(".mrow").forEach(function(r){ r.classList.remove("active"); });
+      row.classList.add("active");
+      avgStrip.classList.remove("active-avg");
+      document.getElementById("adv-" + key).querySelectorAll(".adv-card").forEach(function(c){ c.classList.remove("active-adv"); });
+      var matchAdv = document.getElementById("adv-" + key).querySelector('[data-name="' + m.name + '"]');
+      if (matchAdv) matchAdv.classList.add("active-adv");
+      drawGauge(document.getElementById("svg-" + key), m.pct);
+      document.getElementById("gn-" + key).textContent = m.name;
+      document.getElementById("gs-" + key).textContent = gs(m.pct);
+      document.getElementById("gs-" + key).style.color = gc(m.pct);
+      document.getElementById("ga-" + key).textContent = m.pct + "%";
+      document.getElementById("ga-" + key).style.color = gc(m.pct);
+    });
+    ml.appendChild(row);
+  });
+}
+
+function buildEvolution() {
+  var pkeys = Object.keys(PERIODS).filter(function(k){ return k !== "gen"; });
+  var plabels = pkeys.map(function(k){ return PERIODS[k].label; });
+  var allNames = [];
+  pkeys.forEach(function(k){
+    PERIODS[k].members.forEach(function(m){ if (allNames.indexOf(m.name) < 0) allNames.push(m.name); });
+  });
+  var teamAvgs = pkeys.map(function(k){ return calcAvg(PERIODS[k].members); });
+  var growth = teamAvgs[teamAvgs.length-1] - teamAvgs[0];
+  var posColor = growth >= 0 ? "#10b981" : "#ef4444";
+  var posBg = growth >= 0 ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)";
+
+  document.getElementById("evo-growth").innerHTML =
+    '<span class="eglbl">Crecimiento del equipo (' + plabels[0] + ' a ' + plabels[plabels.length-1] + ')</span>' +
+    '<div class="egr"><span class="egval" style="color:' + posColor + '">' + teamAvgs[0] + '% &rarr; ' + teamAvgs[teamAvgs.length-1] + '%</span>' +
+    '<span class="egbadge" style="color:' + posColor + ';background:' + posBg + '">' + (growth>=0?"+":"") + growth + ' pts</span></div>';
+
+  var ec = document.getElementById("evo-cards");
+  ec.innerHTML = "";
+  allNames.forEach(function(name) {
+    var vals = pkeys.map(function(k){
+      var found = PERIODS[k].members.filter(function(m){ return m.name === name; });
+      return found.length ? found[0].pct : 0;
+    });
+    var delta = vals[vals.length-1] - vals[0];
+    var mx = Math.max.apply(null, vals.concat([1]));
+    var ins = INSIGHTS[name] || { tag:"", tagC:"#888", tagBg:"rgba(128,128,128,0.1)" };
+    var bars = vals.map(function(v, i){
+      return '<div class="eccol"><div class="ecfill" style="height:' + Math.round(v/mx*32) + 'px;background:' + gc(v) + '"></div><div class="eclbl">S' + (10+i) + '</div></div>';
+    }).join("");
+    var card = document.createElement("div"); card.className = "ecard";
+    card.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
+        '<div class="ecname">' + name.split(" ")[0] + '</div>' +
+        '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;color:' + ins.tagC + ';background:' + ins.tagBg + '">' + ins.tag + '</span>' +
+      '</div>' +
+      '<div class="ecbars">' + bars + '</div>' +
+      '<div class="ecfoot"><span class="ecrange">' + vals[0] + '-' + vals[vals.length-1] + '%</span>' +
+      '<span class="ecdelta" style="color:' + (delta>=0?"#10b981":"#ef4444") + '">' + (delta>=0?"+":"") + delta + '</span></div>';
+    ec.appendChild(card);
+  });
+
+  if (evoChart) { evoChart.destroy(); evoChart = null; }
+  var datasets = allNames.map(function(name, i) {
+    return {
+      label: name.split(" ")[0],
+      data: pkeys.map(function(k){
+        var found = PERIODS[k].members.filter(function(m){ return m.name === name; });
+        return found.length ? found[0].pct : null;
+      }),
+      borderColor: LCOLORS[i % LCOLORS.length], backgroundColor: "transparent",
+      pointRadius: 5, pointHoverRadius: 8, tension: 0.4, borderWidth: 2.5,
+      fill: false, spanGaps: true,
+      pointBackgroundColor: LCOLORS[i % LCOLORS.length],
+      pointBorderColor: "#06080f", pointBorderWidth: 2
+    };
+  });
+  datasets.push({
+    label: "Promedio", data: teamAvgs,
+    borderColor: "rgba(255,255,255,0.2)", borderDash: [5,4],
+    backgroundColor: "transparent", pointRadius: 3, tension: 0.3, borderWidth: 1.5, fill: false
+  });
+
+  evoChart = new Chart(document.getElementById("evo-chart"), {
+    type: "line",
+    data: { labels: plabels, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: "bottom",
+        labels: { boxWidth: 8, font:{size:10}, padding:12, color:"#4b5a7a", usePointStyle:true }
+      }},
+      scales: {
+        y: { min: 55, max: 100,
+          ticks: { callback: function(v){return v+"%";}, color:"#2e4060", font:{size:10} },
+          grid:{color:"rgba(255,255,255,0.04)"}, border:{color:"transparent"}
+        },
+        x: { ticks:{color:"#2e4060",font:{size:10}}, grid:{color:"rgba(255,255,255,0.04)"}, border:{color:"transparent"} }
+      }
+    }
+  });
+}
+
+function parseCSV(text) {
+  var lines = text.trim().split("\n").filter(function(l){ return l.trim(); });
+  if (lines.length < 2) return null;
+  var headers = lines[0].split(",").map(function(h){ return h.replace(/"/g,"").trim(); });
+  var result = {};
+  headers.slice(1).forEach(function(h){ if (h && !h.toLowerCase().includes("total")) result[h] = []; });
+  for (var i = 1; i < lines.length; i++) {
+    var cols = lines[i].split(",").map(function(c){ return c.replace(/"/g,"").replace(/%/g,"").trim(); });
+    var name = cols[0];
+    if (!name || name.toLowerCase().includes("total")) continue;
+    headers.slice(1).forEach(function(h, j){
+      if (!result[h]) return;
+      var pct = parseFloat(cols[j+1]);
+      if (!isNaN(pct) && pct > 0) result[h].push({name: name, pct: Math.round(pct)});
+    });
+  }
+  return Object.keys(result).length ? result : null;
+}
+
+function renderAll(data) {
+  PERIODS = {};
+  Object.keys(data).forEach(function(label, i){ PERIODS["p"+(i+1)] = {label:label, members:data[label]}; });
+  var allNames = [];
+  Object.values(PERIODS).forEach(function(p){ p.members.forEach(function(m){ if (allNames.indexOf(m.name)<0) allNames.push(m.name); }); });
+  var genMembers = allNames.map(function(name){
+    var vals = [];
+    Object.values(PERIODS).forEach(function(p){ p.members.forEach(function(m){ if (m.name===name) vals.push(m.pct); }); });
+    return {name:name, pct:Math.round(vals.reduce(function(s,v){return s+v;},0)/vals.length)};
+  }).sort(function(a,b){return b.pct-a.pct;});
+  PERIODS["gen"] = {label:"General", members:genMembers};
+
+  var tabsEl = document.getElementById("tabs");
+  tabsEl.innerHTML = "";
+  var allKeys = Object.keys(PERIODS).concat(["evo"]);
+  allKeys.forEach(function(key, ti) {
+    var label = key==="evo" ? "Evolucion" : (PERIODS[key] ? PERIODS[key].label : key);
+    var btn = document.createElement("button");
+    btn.className = "tab" + (ti===0?" active":"");
+    btn.textContent = label;
+    btn.addEventListener("click", function() {
+      document.querySelectorAll(".tab").forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+      document.querySelectorAll(".section").forEach(function(s){ s.classList.remove("visible"); });
+      document.getElementById("sec-"+key).classList.add("visible");
+    });
+    tabsEl.appendChild(btn);
+  });
+
+  Object.keys(PERIODS).forEach(function(key){
+    buildSection(key, PERIODS[key].label, PERIODS[key].members, PERIODS);
+  });
+
+  // Inject executive summary into General section
+  var genSec = document.getElementById("sec-gen");
+  if (genSec) {
+    var rpanel = genSec.querySelector(".rpanel");
+    if (rpanel) {
+      var execWrap = document.createElement("div");
+      execWrap.className = "exec-wrap";
+      execWrap.innerHTML =
+        '<div class="exec-title">Resumen ejecutivo</div>' +
+        '<div class="exec-grid">' +
+          '<div class="exec-card">' +
+            '<div class="exec-lbl">Logro del equipo</div>' +
+            '<div class="exec-txt">El equipo paso de 73% a 76% a 87% en tres semanas. Un crecimiento de +14 pts que indica una mejora estructural real, no puntual.</div>' +
+          '</div>' +
+          '<div class="exec-card">' +
+            '<div class="exec-lbl">Principal riesgo</div>' +
+            '<div class="exec-txt">Guillermo Angeles es el unico con tendencia negativa al cierre (88 a 76). Requiere plan de accion inmediato para la semana 13.</div>' +
+          '</div>' +
+          '<div class="exec-card">' +
+            '<div class="exec-lbl">Oportunidad</div>' +
+            '<div class="exec-txt">Claudia Anaya y Jose Manuel muestran la mayor capacidad de recuperacion. Con estabilizacion podrian escalar a zona Sobresaliente.</div>' +
+          '</div>' +
+          '<div class="exec-card">' +
+            '<div class="exec-lbl">Recomendacion</div>' +
+            '<div class="exec-txt">Priorizar acompanamiento a Israel Lomeli y Guillermo Angeles. Asignar a Lucio Juarez como modelo de referencia para el equipo.</div>' +
+          '</div>' +
+        '</div>';
+      rpanel.appendChild(execWrap);
+    }
+  }
+  buildEvolution();
+
+  document.querySelectorAll(".section").forEach(function(s){ s.classList.remove("visible"); });
+  var firstSec = document.getElementById("sec-"+Object.keys(PERIODS)[0]);
+  if (firstSec) firstSec.classList.add("visible");
+}
+
+function loadData() {
+  var dot = document.getElementById("sdot"), msg = document.getElementById("smsg");
+  dot.className = "sdot"; msg.textContent = "Cargando...";
+  fetch(SHEET_URL)
+    .then(function(r){ if (!r.ok) throw new Error("HTTP "+r.status); return r.text(); })
+    .then(function(text){
+      var parsed = parseCSV(text);
+      if (!parsed) throw new Error("Sin datos validos");
+      dot.className = "sdot ok";
+      msg.textContent = "Actualizado " + new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+      renderAll(parsed);
+    })
+    .catch(function(e){
+      dot.className = "sdot err"; msg.textContent = "Error: "+e.message;
+      renderAll(FALLBACK);
+    });
+}
+
+setInterval(function(){ loadData(); }, 300000);
+loadData();
+</script>
+</body>
+</html>
