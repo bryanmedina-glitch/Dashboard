@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Velocímetro de Cumplimiento</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d0d0f;color:#f0eeea;font-family:'Outfit',sans-serif;min-height:100vh;padding:28px 32px;}
+h1{font-family:'Bebas Neue',sans-serif;font-size:44px;letter-spacing:1px;color:#f0eeea;margin-bottom:20px;}
+.status-bar{background:#131318;border:1px solid rgba(96,165,250,0.25);border-radius:10px;padding:11px 18px;display:flex;align-items:center;gap:10px;margin-bottom:24px;font-size:13px;color:#60a5fa;}
+.sdot{width:8px;height:8px;border-radius:50%;background:#555;flex-shrink:0;}
+.sdot.ok{background:#4ade80;box-shadow:0 0 6px #4ade80;}
+.sdot.err{background:#f87171;}
+.tabs{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap;}
+.tab{background:#1a1a22;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:7px 18px;font-size:13px;font-weight:500;cursor:pointer;color:#777;transition:all .15s;font-family:'Outfit',sans-serif;}
+.tab:hover{color:#f0eeea;border-color:rgba(255,255,255,0.2);}
+.tab.active{background:#f0eeea;color:#0d0d0f;border-color:#f0eeea;}
+.section{display:none;}
+.section.visible{display:block;}
+.grid{display:grid;grid-template-columns:320px 1fr;gap:18px;}
+@media(max-width:700px){.grid{grid-template-columns:1fr;}}
+.gauge-card{background:#131318;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:22px 18px 18px;display:flex;flex-direction:column;align-items:center;}
+.gc-label{font-family:'DM Mono',monospace;font-size:10px;color:#444;letter-spacing:2px;text-transform:uppercase;align-self:flex-start;margin-bottom:8px;}
+.gc-name{font-size:17px;font-weight:600;margin-top:10px;text-align:center;}
+.gc-status{font-size:13px;font-weight:500;margin-top:3px;}
+.gc-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;justify-content:center;}
+.gl-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#555;}
+.gl-dot{width:7px;height:7px;border-radius:50%;}
+.right-panel{background:#131318;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 20px;}
+.rp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.rp-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:#444;text-transform:uppercase;}
+.rp-refresh{background:#1e1e28;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:6px 13px;color:#888;font-size:12px;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .15s;}
+.rp-refresh:hover{color:#f0eeea;border-color:rgba(255,255,255,0.25);}
+.avg-row{background:#1a1a22;border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.avg-lbl{font-size:13px;color:#555;}
+.avg-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;}
+.member-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;border-radius:8px;transition:background .1s;}
+.member-row:last-child{border-bottom:none;}
+.member-row:hover{background:rgba(255,255,255,0.03);}
+.member-row.active{background:rgba(255,255,255,0.06);}
+.mr-rank{font-family:'DM Mono',monospace;font-size:11px;color:#333;min-width:18px;}
+.mr-info{flex:1;min-width:0;}
+.mr-name{font-size:14px;font-weight:600;}
+.mr-bar-bg{height:4px;background:rgba(255,255,255,0.07);border-radius:2px;margin-top:5px;}
+.mr-bar{height:4px;border-radius:2px;}
+.mr-pct{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;min-width:38px;text-align:right;}
+.evo-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:700px){.evo-wrap{grid-template-columns:1fr;}}
+.evo-left{}
+.evo-growth{background:#131318;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.eg-lbl{font-size:12px;color:#555;}
+.eg-val{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;}
+.evo-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+.evo-card{background:#131318;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:12px 14px;}
+.evo-cname{font-size:12px;font-weight:600;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#bbb;}
+.evo-bars{display:flex;gap:4px;align-items:flex-end;height:40px;margin-bottom:6px;}
+.evo-bcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.evo-bfill{width:100%;border-radius:2px 2px 0 0;}
+.evo-blbl{font-family:'DM Mono',monospace;font-size:9px;color:#333;}
+.evo-foot{display:flex;justify-content:space-between;align-items:center;}
+.evo-range{font-family:'DM Mono',monospace;font-size:10px;color:#444;}
+.evo-delta{font-size:12px;font-weight:600;}
+.chart-card{background:#131318;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:20px;}
+.chart-lbl{font-family:'DM Mono',monospace;font-size:10px;color:#444;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;}
+.chart-wrap{position:relative;width:100%;height:260px;}
+</style>
+</head>
+<body>
+
+<h1>Velocímetro de cumplimiento</h1>
+
+<div class="status-bar">
+  <div class="sdot" id="sdot"></div>
+  <span id="smsg">Cargando...</span>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div id="sec-evo" class="section">
+  <div class="evo-wrap">
+    <div class="evo-left">
+      <div class="evo-growth" id="evo-growth"></div>
+      <div class="evo-cards" id="evo-cards"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-lbl">Evolución semana a semana</div>
+      <div class="chart-wrap"><canvas id="evo-chart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════
+//  CONFIGURACIÓN — pega aquí tu URL de Google Sheets
+//
+//  Estructura de la hoja (fila 1 = encabezados):
+//  Col A: Asesor | Col B: Semana 10 | Col C: Semana 11 | Col D: Semana 12 ...
+//
+//  Cómo obtener la URL:
+//  1. Archivo → Compartir → Publicar en la web
+//  2. Elige tu hoja + formato CSV → Publicar
+//  3. Copia la URL y pégala abajo
+// ══════════════════════════════════════════════════════════
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSfQ5NOre42yMgLxb45UlxqanJQr6TUII_1aJ3DCd7-h43MjbK6-XhgrAsgw1JWEtiSL_Insq3M91JY/pub?output=csv";
+
+const FALLBACK = {
+  "Semana 10":[
+    {name:"Lucio Juarez",pct:84},{name:"Jose Manuel",pct:81},{name:"Israel Lomeli",pct:75},
+    {name:"Zuriel Serrato",pct:70},{name:"Guillermo Angeles",pct:66},{name:"Claudia Anaya",pct:59}
+  ],
+  "Semana 11":[
+    {name:"Lucio Juarez",pct:92},{name:"Guillermo Angeles",pct:88},{name:"Zuriel Serrato",pct:72},
+    {name:"Claudia Anaya",pct:70},{name:"Jose Manuel",pct:67},{name:"Israel Lomeli",pct:65}
+  ],
+  "Semana 12":[
+    {name:"Lucio Juarez",pct:96},{name:"Jose Manuel",pct:92},{name:"Zuriel Serrato",pct:88},
+    {name:"Claudia Anaya",pct:87},{name:"Israel Lomeli",pct:83},{name:"Guillermo Angeles",pct:76}
+  ]
+};
+
+let PERIODS={};
+let evoChart=null;
+
+function gc(p){
+  if(p>=95)return"#4ade80";
+  if(p>=85)return"#a3e635";
+  if(p>=70)return"#f59e0b";
+  if(p>=60)return"#fb923c";
+  return"#f87171";
+}
+function gs(p){
+  if(p>=95)return"Sobresaliente";
+  if(p>=85)return"Competente";
+  if(p>=70)return"En riesgo";
+  return"Crítico";
+}
+function avgArr(arr){return Math.round(arr.reduce((s,m)=>s+m.pct,0)/arr.length);}
+
+function drawGauge(svgEl,value){
+  svgEl.innerHTML="";
+  const cx=150,cy=150,r=115,sw=20;
+  function pt(f,rad){const a=Math.PI+f*Math.PI;return{x:cx+rad*Math.cos(a),y:cy+rad*Math.sin(a)};}
+  function ap(f1,f2,rad){const s=pt(f1,rad),e=pt(f2,rad),lg=(f2-f1)>.5?1:0;return`M${s.x.toFixed(1)} ${s.y.toFixed(1)}A${rad} ${rad} 0 ${lg} 1 ${e.x.toFixed(1)} ${e.y.toFixed(1)}`;}
+  [[0,.60,"#f87171"],[.60,.70,"#fb923c"],[.70,.85,"#f59e0b"],[.85,.95,"#a3e635"],[.95,1,"#4ade80"]].forEach(([f1,f2,c])=>{
+    const p=document.createElementNS("http://www.w3.org/2000/svg","path");
+    p.setAttribute("d",ap(f1,f2,r));p.setAttribute("stroke",c);p.setAttribute("stroke-width",sw+10);
+    p.setAttribute("fill","none");p.setAttribute("opacity","0.15");svgEl.appendChild(p);
+  });
+  const track=document.createElementNS("http://www.w3.org/2000/svg","path");
+  track.setAttribute("d",ap(0,1,r));track.setAttribute("stroke","#1e1e28");track.setAttribute("stroke-width",sw);track.setAttribute("fill","none");svgEl.appendChild(track);
+  const frac=Math.min(Math.max(value/100,0),1);
+  if(frac>0){
+    const fill=document.createElementNS("http://www.w3.org/2000/svg","path");
+    fill.setAttribute("d",ap(0,frac,r));fill.setAttribute("stroke",gc(value));fill.setAttribute("stroke-width",sw);
+    fill.setAttribute("fill","none");fill.setAttribute("stroke-linecap","round");svgEl.appendChild(fill);
+  }
+  [{f:0,t:"0"},{f:.6,t:"60"},{f:.7,t:"70"},{f:.85,t:"85"},{f:.95,t:"95"},{f:1,t:"100"}].forEach(({f,t})=>{
+    const pos=pt(f,r-sw/2-16);
+    const tx=document.createElementNS("http://www.w3.org/2000/svg","text");
+    tx.setAttribute("x",pos.x);tx.setAttribute("y",pos.y);tx.setAttribute("text-anchor","middle");
+    tx.setAttribute("dominant-baseline","middle");tx.setAttribute("font-size","9.5");tx.setAttribute("fill","#444");
+    tx.setAttribute("font-family","DM Mono,monospace");tx.textContent=t;svgEl.appendChild(tx);
+  });
+  const na=Math.PI+frac*Math.PI,nl=r-sw/2-6;
+  const shad=document.createElementNS("http://www.w3.org/2000/svg","line");
+  shad.setAttribute("x1",cx);shad.setAttribute("y1",cy);shad.setAttribute("x2",cx+nl*Math.cos(na));shad.setAttribute("y2",cy+nl*Math.sin(na));
+  shad.setAttribute("stroke","rgba(0,0,0,0.5)");shad.setAttribute("stroke-width","5");shad.setAttribute("stroke-linecap","round");svgEl.appendChild(shad);
+  const needle=document.createElementNS("http://www.w3.org/2000/svg","line");
+  needle.setAttribute("x1",cx);needle.setAttribute("y1",cy);needle.setAttribute("x2",cx+nl*Math.cos(na));needle.setAttribute("y2",cy+nl*Math.sin(na));
+  needle.setAttribute("stroke","#f0eeea");needle.setAttribute("stroke-width","2.5");needle.setAttribute("stroke-linecap","round");svgEl.appendChild(needle);
+  const dot=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  dot.setAttribute("cx",cx);dot.setAttribute("cy",cy);dot.setAttribute("r","7");dot.setAttribute("fill","#f0eeea");svgEl.appendChild(dot);
+  const vt=document.createElementNS("http://www.w3.org/2000/svg","text");
+  vt.setAttribute("x",cx);vt.setAttribute("y",cy-30);vt.setAttribute("text-anchor","middle");
+  vt.setAttribute("font-size","30");vt.setAttribute("font-weight","700");vt.setAttribute("fill",gc(value));
+  vt.setAttribute("font-family","DM Mono,monospace");vt.textContent=value+"%";svgEl.appendChild(vt);
+}
+
+function buildPeriodSection(key,label,members){
+  let sec=document.getElementById("sec-"+key);
+  if(!sec){sec=document.createElement("div");sec.id="sec-"+key;sec.className="section";document.querySelector(".tabs").after(sec);}
+  const a=avgArr(members);
+  const sorted=[...members].sort((a,b)=>b.pct-a.pct);
+  sec.innerHTML=`<div class="grid">
+    <div class="gauge-card">
+      <div class="gc-label">Indicador — ${label}</div>
+      <svg id="svg-${key}" viewBox="0 0 300 165" width="100%" style="max-width:300px"></svg>
+      <div class="gc-name" id="gn-${key}">${label}</div>
+      <div class="gc-status" id="gs-${key}" style="color:${gc(a)}">${gs(a)}</div>
+      <div class="gc-legend">
+        <div class="gl-item"><div class="gl-dot" style="background:#f87171"></div>&lt;70%</div>
+        <div class="gl-item"><div class="gl-dot" style="background:#f59e0b"></div>70–84%</div>
+        <div class="gl-item"><div class="gl-dot" style="background:#a3e635"></div>85–94%</div>
+        <div class="gl-item"><div class="gl-dot" style="background:#4ade80"></div>≥95%</div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="rp-header">
+        <span class="rp-title">Equipo</span>
+        <button class="rp-refresh" onclick="loadData()">↻ Actualizar</button>
+      </div>
+      <div class="avg-row"><span class="avg-lbl">Promedio general</span><span class="avg-val" id="ga-${key}" style="color:${gc(a)}">${a}%</span></div>
+      <div id="ml-${key}"></div>
+    </div>
+  </div>`;
+  drawGauge(document.getElementById("svg-"+key),a);
+  const ml=document.getElementById("ml-"+key);
+  sorted.forEach((m,i)=>{
+    const row=document.createElement("div");
+    row.className="member-row";
+    row.innerHTML=`<div class="mr-rank">${String(i+1).padStart(2,"0")}</div>
+      <div class="mr-info"><div class="mr-name">${m.name}</div>
+      <div class="mr-bar-bg"><div class="mr-bar" style="width:${m.pct}%;background:${gc(m.pct)}"></div></div></div>
+      <div class="mr-pct" style="color:${gc(m.pct)}">${m.pct}%</div>`;
+    row.addEventListener("click",()=>{
+      ml.querySelectorAll(".member-row").forEach(r=>r.classList.remove("active"));
+      row.classList.add("active");
+      drawGauge(document.getElementById("svg-"+key),m.pct);
+      document.getElementById("gn-"+key).textContent=m.name;
+      document.getElementById("gs-"+key).textContent=gs(m.pct);
+      document.getElementById("gs-"+key).style.color=gc(m.pct);
+      document.getElementById("ga-"+key).textContent=m.pct+"%";
+      document.getElementById("ga-"+key).style.color=gc(m.pct);
+    });
+    ml.appendChild(row);
+  });
+}
+
+function buildEvolution(){
+  const pkeys=Object.keys(PERIODS).filter(k=>k!=="gen");
+  const plabels=pkeys.map(k=>PERIODS[k].label);
+  const allNames=[...new Set(pkeys.flatMap(k=>PERIODS[k].members.map(m=>m.name)))];
+  const teamAvgs=pkeys.map(k=>avgArr(PERIODS[k].members));
+  const growth=teamAvgs[teamAvgs.length-1]-teamAvgs[0];
+  const growthColor=growth>=0?"#4ade80":"#f87171";
+  document.getElementById("evo-growth").innerHTML=`
+    <span class="eg-lbl">Crecimiento del equipo (${plabels[0]} → ${plabels[plabels.length-1]})</span>
+    <span class="eg-val" style="color:${growthColor}">${teamAvgs[0]}% → ${teamAvgs[teamAvgs.length-1]}% &nbsp;${growth>=0?"↑":"↓"}${Math.abs(growth)} pts</span>`;
+  const ec=document.getElementById("evo-cards");
+  ec.innerHTML="";
+  const lineColors=["#4ade80","#60a5fa","#f59e0b","#f472b6","#a78bfa","#fb923c"];
+  allNames.forEach(name=>{
+    const vals=pkeys.map(k=>PERIODS[k].members.find(m=>m.name===name)?.pct||0);
+    const delta=vals[vals.length-1]-vals[0];
+    const mx=Math.max(...vals,1);
+    const card=document.createElement("div");card.className="evo-card";
+    const bars=vals.map((v,i)=>`<div class="evo-bcol"><div class="evo-bfill" style="height:${Math.round(v/mx*34)}px;background:${gc(v)}"></div><div class="evo-blbl">S${10+i}</div></div>`).join("");
+    card.innerHTML=`<div class="evo-cname">${name}</div><div class="evo-bars">${bars}</div>
+      <div class="evo-foot"><span class="evo-range">${vals[0]}→${vals[vals.length-1]}%</span>
+      <span class="evo-delta" style="color:${delta>=0?'#4ade80':'#f87171'}">${delta>=0?"+":""}${delta}</span></div>`;
+    ec.appendChild(card);
+  });
+  if(evoChart){evoChart.destroy();}
+  const datasets=allNames.map((name,i)=>({
+    label:name.split(" ")[0],
+    data:pkeys.map(k=>PERIODS[k].members.find(m=>m.name===name)?.pct||null),
+    borderColor:lineColors[i%lineColors.length],backgroundColor:"transparent",
+    pointRadius:5,pointHoverRadius:7,tension:0.35,borderWidth:2,fill:false,spanGaps:true
+  }));
+  datasets.push({label:"Promedio",data:teamAvgs,borderColor:"#ffffff",borderDash:[5,4],
+    backgroundColor:"transparent",pointRadius:4,tension:0.3,borderWidth:1.5,fill:false});
+  evoChart=new Chart(document.getElementById("evo-chart"),{
+    type:"line",
+    data:{labels:plabels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:"bottom",labels:{boxWidth:10,font:{size:11},padding:12,color:"#555"}}},
+      scales:{
+        y:{min:50,max:100,ticks:{color:"#555",font:{size:11},callback:v=>v+"%"},grid:{color:"rgba(255,255,255,0.04)"},border:{color:"rgba(255,255,255,0.05)"}},
+        x:{ticks:{color:"#555",font:{size:11}},grid:{color:"rgba(255,255,255,0.04)"},border:{color:"rgba(255,255,255,0.05)"}}
+      }
+    }
+  });
+}
+
+function parseCSV(text){
+  const lines=text.trim().split("\n").filter(l=>l.trim());
+  if(lines.length<2)return null;
+  const headers=lines[0].split(",").map(h=>h.replace(/"/g,"").trim());
+  const result={};
+  headers.slice(1).forEach(h=>{if(h&&h.toLowerCase()!=="total general")result[h]=[];});
+  for(let i=1;i<lines.length;i++){
+    const cols=lines[i].split(",").map(c=>c.replace(/"/g,"").replace("%","").trim());
+    const name=cols[0];
+    if(!name||name.toLowerCase().includes("total"))continue;
+    headers.slice(1).forEach((h,j)=>{
+      if(!result[h])return;
+      const pct=Math.round(parseFloat(cols[j+1])*100)/100;
+      if(!isNaN(pct)&&pct>0)result[h].push({name,pct:Math.round(pct)});
+    });
+  }
+  return result;
+}
+
+function renderAll(data){
+  PERIODS={};
+  const periodKeys=Object.keys(data);
+  periodKeys.forEach((label,i)=>{
+    const key="p"+(i+1);
+    PERIODS[key]={label,members:data[label]};
+  });
+  const allNames=[...new Set(Object.values(PERIODS).flatMap(p=>p.members.map(m=>m.name)))];
+  const genMembers=allNames.map(name=>{
+    const vals=Object.values(PERIODS).flatMap(p=>p.members.filter(m=>m.name===name).map(m=>m.pct));
+    return{name,pct:Math.round(vals.reduce((s,v)=>s+v,0)/vals.length)};
+  }).sort((a,b)=>b.pct-a.pct);
+  PERIODS["gen"]={label:"General",members:genMembers};
+
+  const tabsEl=document.getElementById("tabs");
+  tabsEl.innerHTML="";
+  const allKeys=[...Object.keys(PERIODS),"evo"];
+  allKeys.forEach((key,ti)=>{
+    const label=key==="evo"?"Evolución":PERIODS[key]?.label||key;
+    const btn=document.createElement("button");
+    btn.className="tab"+(ti===0?" active":"");
+    btn.dataset.k=key;btn.textContent=label;
+    btn.addEventListener("click",()=>{
+      document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".section").forEach(s=>s.classList.remove("visible"));
+      document.getElementById("sec-"+key).classList.add("visible");
+    });
+    tabsEl.appendChild(btn);
+  });
+
+  Object.entries(PERIODS).forEach(([key,{label,members}])=>{
+    buildPeriodSection(key,label,members);
+  });
+  buildEvolution();
+
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("visible"));
+  const firstKey=Object.keys(PERIODS)[0];
+  document.getElementById("sec-"+firstKey)?.classList.add("visible");
+}
+
+async function loadData(){
+  const dot=document.getElementById("sdot"),msg=document.getElementById("smsg");
+  dot.className="sdot";msg.textContent="Cargando datos...";
+  if(!SHEET_URL){
+    msg.textContent="Mostrando datos de ejemplo — configura SHEET_URL en el código";
+    renderAll(FALLBACK);return;
+  }
+  try{
+    const res=await fetch(SHEET_URL);
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const text=await res.text();
+    const parsed=parseCSV(text);
+    if(!parsed||!Object.keys(parsed).length)throw new Error("Sin datos válidos");
+    dot.className="sdot ok";
+    msg.textContent="Actualizado — "+new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+    renderAll(parsed);
+  }catch(e){
+    dot.className="sdot err";
+    msg.textContent="Error: "+e.message;
+    renderAll(FALLBACK);
+  }
+}
+
+setInterval(()=>{if(SHEET_URL)loadData();},5*60*1000);
+loadData();
+</script>
+</body>
+</html>
